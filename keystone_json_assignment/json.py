@@ -8,12 +8,20 @@ from oslo_log import log
 import keystone.conf
 from keystone.assignment.backends import sql
 from keystone.common import dependency
+from keystone.common import driver_hints
 from keystone.common import manager
 from keystone import exception
 from keystone import resource
 
 CONF = keystone.conf.CONF
 LOG = log.getLogger(__name__)
+
+json_assignment_opts = [
+    cfg.ListOpt('default_roles',
+                default=['Member'],
+                help='List of roles assigned by default to an LDAP user'),
+]
+CONF.register_opts(json_assignment_opts, 'json_assignment')
 
 class Assignment(sql.Assignment):
 
@@ -24,6 +32,10 @@ class Assignment(sql.Assignment):
         domain_config['cfg'](args=[], project='keystone', default_config_files=['/etc/keystone/domains/keystone.ldap_users.conf'], default_config_dirs=[])
         self.identity_manager = manager.load_driver('keystone.identity', domain_config['cfg'].identity.driver, domain_config['cfg'])
         self.id_mapping_manager = manager.load_driver('keystone.identity.id_mapping', CONF.identity_mapping.driver)
+        self.role_manager = manager.load_driver('keystone.role', CONF.role.driver)
+        role_name_filter = driver_hints.Hints()
+        role_name_filter.add_filter('name', CONF.json_assignment.default_roles[0])
+        self.role_id = self.role_manager.list_roles(role_name_filter)[0]['id']
         with open('/etc/keystone/user-project-map.json', 'r') as f:
             self.userprojectmap = yaml.load(f)
         projectidcache = {}
@@ -83,7 +95,7 @@ class Assignment(sql.Assignment):
             user_id = self.identity_manager.get_user_by_name(user, 'ldap_users')['id']
             user_id = self.id_mapping_manager.get_public_id({'domain_id': 'f5f4b426315c4201b148fe159c3fe900', 'local_id': user_id, 'entity_type': 'user' })
             for project in projects:
-                role_assignments.append({'role_id': 'a5f4ff37013543b7a9ce3583b4ea7ed3', 'user_id': user_id, 'project_id': project})
+                role_assignments.append({'role_id': self.role_id, 'user_id': user_id, 'project_id': project})
 
         return role_assignments
 
