@@ -20,6 +20,9 @@ json_assignment_opts = [
     cfg.ListOpt('default_roles',
                 default=['Member'],
                 help='List of roles assigned by default to an LDAP user'),
+    cfg.StrOpt('ldap_domain_name',
+                default='ldap_users',
+                help='Domain for the users in the JSON map. Only supports one domain.'),
 ]
 CONF.register_opts(json_assignment_opts, 'json_assignment')
 
@@ -29,7 +32,12 @@ class Assignment(sql.Assignment):
         self.resource_manager = manager.load_driver('keystone.resource', CONF.resource.driver)
         domain_config = { 'cfg': cfg.ConfigOpts() }
         keystone.conf.configure(conf=domain_config['cfg'])
-        domain_config['cfg'](args=[], project='keystone', default_config_files=['/etc/keystone/domains/keystone.ldap_users.conf'], default_config_dirs=[])
+        self.domain_name = CONF.json_assignment.ldap_domain_name
+        domain_name_filter= driver_hints.Hints()
+        domain_name_filter.add_filter('name', self.domain_name)
+        self.domain_id = self.resource_manager.get_project_by_name(self.domain_name, domain_id=None)['id']
+        domain_config_file = "/etc/keystone/domains/keystone.%s.conf" % self.domain_name
+        domain_config['cfg'](args=[], project='keystone', default_config_files=[domain_config_file], default_config_dirs=[])
         self.identity_manager = manager.load_driver('keystone.identity', domain_config['cfg'].identity.driver, domain_config['cfg'])
         self.id_mapping_manager = manager.load_driver('keystone.identity.id_mapping', CONF.identity_mapping.driver)
         self.role_manager = manager.load_driver('keystone.role', CONF.role.driver)
@@ -92,8 +100,8 @@ class Assignment(sql.Assignment):
              inherited_to_projects=inherited_to_projects)
 
         for user, projects in self.userprojectmap.items():
-            user_id = self.identity_manager.get_user_by_name(user, 'ldap_users')['id']
-            user_id = self.id_mapping_manager.get_public_id({'domain_id': 'f5f4b426315c4201b148fe159c3fe900', 'local_id': user_id, 'entity_type': 'user' })
+            user_id = self.identity_manager.get_user_by_name(user, self.domain_name)['id']
+            user_id = self.id_mapping_manager.get_public_id({'domain_id': self.domain_id, 'local_id': user_id, 'entity_type': 'user' })
             for project in projects:
                 role_assignments.append({'role_id': self.role_id, 'user_id': user_id, 'project_id': project})
 
