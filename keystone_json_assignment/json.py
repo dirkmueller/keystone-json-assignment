@@ -28,7 +28,6 @@ class Assignment(sql.Assignment):
             self.userprojectmap = yaml.load(f)
         projectidcache = {}
         for user in self.userprojectmap:
-            LOG.info("found user in map: %s" % user)
             projectids = {}
             projectid = None
             for projectname in self.userprojectmap[user]:
@@ -37,10 +36,8 @@ class Assignment(sql.Assignment):
                 except:
                     # cache miss - need to fetch from DB
                     try:
-                        LOG.info("looking for project %s" % projectname)
                         project = self.resource_manager.get_project_by_name(
                             projectname, CONF.identity.default_domain_id)
-                        LOG.info("found project %s" % project)
                         projectid = project['id']
                         projectidcache[projectname] = project['id']
                     except Exception as e:
@@ -83,7 +80,6 @@ class Assignment(sql.Assignment):
              inherited_to_projects=inherited_to_projects)
 
         for user, projects in self.userprojectmap.items():
-            LOG.info("Assigning roles for user %s" % user)
             user_id = self.identity_manager.get_user_by_name(user, 'ldap_users')['id']
             user_id = self.id_mapping_manager.get_public_id({'domain_id': 'f5f4b426315c4201b148fe159c3fe900', 'local_id': user_id, 'entity_type': 'user' })
             for project in projects:
