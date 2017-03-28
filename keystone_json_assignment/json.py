@@ -123,8 +123,18 @@ class Assignment(sql.Assignment):
         :returns: None or raises an exception if grant not found
 
         """
-        msg = "Check Grant Role ID not implemented yet"
-        raise exception.NotImplemented(message=msg)
+        try:
+            super(Assignment, self).check_grant_role_id(
+                    role_id, user_id=user_id, group_id=group_id,
+                    domain_id=domain_id, project_id=project_id,
+                    inherited_to_projects=inherited_to_projects)
+        except keystone.exception.RoleAssignmentNotFound:
+            if role_id != self.role_id:
+                raise
+            if user_id not in self.userprojectmap:
+                raise
+            if project_id not in self.userprojectmap[user_id]:
+                raise
 
     def list_role_assignments(self, role_id=None,
                               user_id=None, group_ids=None,
