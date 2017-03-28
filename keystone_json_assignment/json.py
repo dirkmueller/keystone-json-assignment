@@ -103,8 +103,15 @@ class Assignment(sql.Assignment):
                             domain_id=None, project_id=None,
                             inherited_to_projects=False):
         """List role ids for assignments/grants."""
-        msg = "List Grant Role IDs not implemented yet"
-        raise exception.NotImplemented(message=msg)
+        role_ids = super(Assignment, self).list_grant_role_ids(
+            user_id=user_id, group_id=group_id,
+            domain_id=domain_id, project_id=project_id,
+            inherited_to_projects=inherited_to_projects)
+
+        if user_id in self.userprojectmap and \
+                project_id in self.userprojectmap[user_id]:
+            role_ids.append(self.role_id)
+        return role_ids
 
     def check_grant_role_id(self, role_id, user_id=None, group_id=None,
                             domain_id=None, project_id=None,
