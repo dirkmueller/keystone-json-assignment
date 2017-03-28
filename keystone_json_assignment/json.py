@@ -75,15 +75,18 @@ class Assignment(sql.Assignment):
         self.role_id = self._get_role_id()
 
         with open('/etc/keystone/user-project-map.json', 'r') as f:
-            self.userprojectmap = yaml.load(f)
+            userprojectmap = yaml.load(f)
+
+        self.userprojectmap = {}
         projectidcache = {}
-        for user in self.userprojectmap:
+        for user, project in userprojectmap.items():
             projectids = {}
             projectid = None
-            for projectname in self.userprojectmap[user]:
+            user_id = self._get_user_id(user)
+            for projectname in project:
                 try:
                     projectid = projectidcache[projectname]
-                except:
+                except KeyError:
                     # cache miss - need to fetch from DB
                     try:
                         project = self.resource_manager.get_project_by_name(
@@ -94,7 +97,7 @@ class Assignment(sql.Assignment):
                         print(e)
                 if projectid:
                     projectids[projectid] = 1
-            self.userprojectmap[user] = projectids
+            self.userprojectmap[user_id] = projectids
 
     def list_grant_role_ids(self, user_id=None, group_id=None,
                             domain_id=None, project_id=None,
@@ -131,8 +134,7 @@ class Assignment(sql.Assignment):
              domain_id=domain_id, project_ids=project_ids,
              inherited_to_projects=inherited_to_projects)
 
-        for user, projects in self.userprojectmap.items():
-            user_id = self._get_user_id(user)
+        for user_id, projects in self.userprojectmap.items():
             for project in projects:
                 role_assignments.append({
                     'role_id': self.role_id,
