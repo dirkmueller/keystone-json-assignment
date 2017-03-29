@@ -21,7 +21,6 @@ import keystone.conf
 from keystone.assignment.backends import sql
 from keystone.common import driver_hints
 from keystone.common import manager
-from keystone import exception
 
 CONF = keystone.conf.CONF
 LOG = log.getLogger(__name__)
@@ -173,41 +172,49 @@ class Assignment(sql.Assignment):
         return role_assignments
 
     def add_role_to_user_and_project(self, user_id, tenant_id, role_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).add_role_to_user_and_project(
+            user_id, tenant_id, role_id)
 
     def remove_role_from_user_and_project(self, user_id, tenant_id, role_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).remove_role_from_user_and_project(
+            user_id, tenant_id, role_id)
 
     def create_grant(self, role_id, user_id=None, group_id=None,
                      domain_id=None, project_id=None,
                      inherited_to_projects=False):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).create_grant(
+            role_id, user_id=user_id, group_id=group_id,
+            domain_id=domain_id, project_id=project_id,
+            inherited_to_projects=inherited_to_projects)
 
     def delete_grant(self, role_id, user_id=None, group_id=None,
                      domain_id=None, project_id=None,
                      inherited_to_projects=False):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).delete_grant(
+            role_id, user_id=user_id, group_id=group_id,
+            domain_id=domain_id, project_id=project_id,
+            inherited_to_projects=inherited_to_projects)
 
     def delete_project_assignments(self, project_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).delete_project_assignments(project_id)
 
     def delete_role_assignments(self, role_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).delete_role_assignments(role_id)
 
     def delete_user_assignments(self, user_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).delete_user_assignments(user_id)
 
     def delete_group_assignments(self, group_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).delete_group_assignments(group_id)
 
     def delete_domain_assignments(self, domain_id):
-        msg = "This assignment backend is read-only."
-        raise exception.NotImplemented(message=msg)
+        LOG.debug("Forwarding request to the SQL assignment driver")
+        return super(Assignment, self).delete_domain_assignments(domain_id)
