@@ -19,6 +19,7 @@ from oslo_log import log
 
 import keystone.conf
 from keystone.assignment.backends import sql
+from keystone import exception
 from keystone.common import driver_hints
 from keystone.common import manager
 
@@ -70,8 +71,12 @@ class Assignment(sql.Assignment):
         return self.role_manager.list_roles(role_name_filter)[0]['id']
 
     def _get_user_id(self, user_name):
-        user_id = self.identity_manager.get_user_by_name(
-            user_name, self.domain_name)['id']
+        try:
+            user_id = self.identity_manager.get_user_by_name(
+                user_name, self.domain_name)['id']
+        except exception.UserNotFound:
+            LOG.warning("Could not find user: %s" % user_name)
+            return None
         user_id = self.id_mapping_manager.get_public_id({
             'domain_id': self.domain_id,
             'local_id': user_id,
@@ -94,6 +99,8 @@ class Assignment(sql.Assignment):
             projectids = {}
             projectid = None
             user_id = self._get_user_id(user)
+            if not user_id:
+                continue
             for projectname in project:
                 try:
                     projectid = projectidcache[projectname]
