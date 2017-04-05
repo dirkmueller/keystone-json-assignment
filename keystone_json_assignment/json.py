@@ -111,8 +111,8 @@ class Assignment(sql.Assignment):
                             projectname, CONF.identity.default_domain_id)
                         projectid = project['id']
                         projectidcache[projectname] = project['id']
-                    except Exception as e:
-                        print(e)
+                    except exception.ProjectNotFound as e:
+                        LOG.warning(e.message)
                 if projectid:
                     projectids[projectid] = 1
             self.userprojectmap[user_id] = projectids
