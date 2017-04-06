@@ -77,11 +77,13 @@ class Assignment(sql.Assignment):
         except exception.UserNotFound:
             LOG.warning("Could not find user: %s" % user_name)
             return None
-        user_id = self.id_mapping_manager.get_public_id({
+        return user_id
+
+    def _get_public_id(self, user_id):
+        return self.id_mapping_manager.get_public_id({
             'domain_id': self.domain_id,
             'local_id': user_id,
             'entity_type': 'user'})
-        return user_id
 
     def __init__(self):
         self.domain_name = CONF.json_assignment.ldap_domain_name
@@ -94,13 +96,14 @@ class Assignment(sql.Assignment):
             userprojectmap = yaml.load(f)
 
         self.userprojectmap = {}
+        self.useridmap = {}
         projectidcache = {}
         for user, project in userprojectmap.items():
             projectids = {}
             projectid = None
-            user_id = self._get_user_id(user)
-            if not user_id:
-                continue
+            user_id = self._get_public_id(self._get_user_id(user))
+            if user_id:
+                self.useridmap[user_id] = user
             for projectname in project:
                 try:
                     projectid = projectidcache[projectname]
@@ -115,7 +118,7 @@ class Assignment(sql.Assignment):
                         LOG.warning(e.message)
                 if projectid:
                     projectids[projectid] = 1
-            self.userprojectmap[user_id] = projectids
+            self.userprojectmap[user] = projectids
 
     def list_grant_role_ids(self, user_id=None, group_id=None,
                             domain_id=None, project_id=None,
@@ -126,8 +129,9 @@ class Assignment(sql.Assignment):
             domain_id=domain_id, project_id=project_id,
             inherited_to_projects=inherited_to_projects)
 
-        if user_id in self.userprojectmap and \
-                project_id in self.userprojectmap[user_id]:
+        user = self.useridmap.get(user_id)
+        if user and user in self.userprojectmap and \
+                project_id in self.userprojectmap[user]:
             role_ids.append(self.role_id)
         return role_ids
 
@@ -149,9 +153,9 @@ class Assignment(sql.Assignment):
         except keystone.exception.RoleAssignmentNotFound:
             if role_id != self.role_id:
                 raise
-            if user_id not in self.userprojectmap:
+            if user_id not in self.useridmap:
                 raise
-            if project_id not in self.userprojectmap[user_id]:
+            if project_id not in self.userprojectmap[self.useridmap[user_id]]:
                 raise
 
     def list_role_assignments(self, role_id=None,
@@ -169,11 +173,24 @@ class Assignment(sql.Assignment):
              domain_id=domain_id, project_ids=project_ids,
              inherited_to_projects=inherited_to_projects)
 
-        for user_id, projects in self.userprojectmap.items():
+        for user, projects in self.userprojectmap.items():
+            user_id = self._get_user_id(user)
+            if not user_id:
+                # We couldn't find the user in LDAP, move on
+                continue
+            public_id = self._get_public_id(user_id)
+            if not public_id:
+               # The user exists in LDAP but hasn't been populated into
+               # the mapping table yet
+                entity = {'domain_id': self.domain_id,
+                          'local_id': user_id,
+                          'entity_type': 'user'}
+                public_id = self.id_mapping_manager.create_id_mapping(entity)
+                self.useridmap[public_id] = user
             for project in projects:
                 role_assignments.append({
                     'role_id': self.role_id,
-                    'user_id': user_id,
+                    'user_id': public_id,
                     'project_id': project
                 })
         return role_assignments
