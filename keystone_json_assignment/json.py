@@ -173,21 +173,34 @@ class Assignment(sql.Assignment):
              domain_id=domain_id, project_ids=project_ids,
              inherited_to_projects=inherited_to_projects)
 
+        if domain_id:
+            # This driver doesn't deal with domains, just return the SQL grants
+            return role_assignments
+        if group_ids:
+            # This driver doesn't deal with groups, just return the SQL grants
+            return role_assignments
         for user, projects in self.userprojectmap.items():
-            user_id = self._get_user_id(user)
-            if not user_id:
+            uid = self._get_user_id(user)
+            if not uid:
                 # We couldn't find the user in LDAP, move on
                 continue
-            public_id = self._get_public_id(user_id)
+            public_id = self._get_public_id(uid)
+            if user_id and user_id != public_id:
+                # We're filtering on a user and this isn't it, move on
+                continue
             if not public_id:
-               # The user exists in LDAP but hasn't been populated into
-               # the mapping table yet
+                # The user exists in LDAP but hasn't been populated into
+                # the mapping table yet
                 entity = {'domain_id': self.domain_id,
-                          'local_id': user_id,
+                          'local_id': uid,
                           'entity_type': 'user'}
                 public_id = self.id_mapping_manager.create_id_mapping(entity)
                 self.useridmap[public_id] = user
             for project in projects:
+                if project_ids and project not in project_ids:
+                    # We're filtering on projects and this one isn't one of
+                    # them, move on
+                    continue
                 role_assignments.append({
                     'role_id': self.role_id,
                     'user_id': public_id,
