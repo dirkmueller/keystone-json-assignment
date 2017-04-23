@@ -70,15 +70,6 @@ class Assignment(sql.Assignment):
         role_name_filter.add_filter('name', role_name)
         return self.role_manager.list_roles(role_name_filter)[0]['id']
 
-    def _get_user_id(self, user_name):
-        try:
-            user_id = self.identity_manager.get_user_by_name(
-                user_name, self.domain_name)['id']
-        except exception.UserNotFound:
-            LOG.warning("Could not find user: %s" % user_name)
-            return None
-        return user_id
-
     def _get_public_id(self, user_id):
         return self.id_mapping_manager.get_public_id({
             'domain_id': self.domain_id,
@@ -101,7 +92,7 @@ class Assignment(sql.Assignment):
         for user, project in userprojectmap.items():
             projectids = {}
             projectid = None
-            user_id = self._get_public_id(self._get_user_id(user))
+            user_id = self._get_public_id(user)
             if user_id:
                 self.useridmap[user_id] = user
             for projectname in project:
@@ -179,23 +170,42 @@ class Assignment(sql.Assignment):
         if group_ids:
             # This driver doesn't deal with groups, just return the SQL grants
             return role_assignments
+        if user_id:
+            # Filtering on user
+            if user_id in self.useridmap:
+                projects = self.userprojectmap.get(self.useridmap[user_id])
+                if projects:
+                    for project in projects:
+                        role_assignments.append({
+                            'role_id': self.role_id,
+                            'user_id': user_id,
+                            'project_id': project
+                        })
+            # If user is not in the map then this is probably not an LDAP user
+            # so just return the SQL grants
+            return role_assignments
         for user, projects in self.userprojectmap.items():
-            uid = self._get_user_id(user)
-            if not uid:
-                # We couldn't find the user in LDAP, move on
+            # Make sure we can find the user in LDAP, otherwise we will get a 404
+            # when using `openstack role assignment list --names`
+            # (see https://bugs.launchpad.net/keystone/+bug/1684820)
+            try:
+                self.identity_manager.get_user_by_name(user, self.domain_name)
+            except exception.UserNotFound:
+                LOG.warning("Could not find user: %s" % user)
                 continue
-            public_id = self._get_public_id(uid)
-            if user_id and user_id != public_id:
-                # We're filtering on a user and this isn't it, move on
-                continue
-            if not public_id:
-                # The user exists in LDAP but hasn't been populated into
-                # the mapping table yet
+            user_id = self._get_public_id(user)
+            if not user_id:
+                # The user hasn't been populated into the mapping table yet
                 entity = {'domain_id': self.domain_id,
-                          'local_id': uid,
+                          'local_id': user,
                           'entity_type': 'user'}
-                public_id = self.id_mapping_manager.create_id_mapping(entity)
-                self.useridmap[public_id] = user
+                try:
+                    user_id = self.id_mapping_manager.create_id_mapping(entity)
+                    self.useridmap[user_id] = user
+                except exceptions.UserNotFound:
+                    # User wasn't found in LDAP
+                    LOG.warning("Could not find user: %s" % user)
+                    continue
             for project in projects:
                 if project_ids and project not in project_ids:
                     # We're filtering on projects and this one isn't one of
@@ -203,7 +213,7 @@ class Assignment(sql.Assignment):
                     continue
                 role_assignments.append({
                     'role_id': self.role_id,
-                    'user_id': public_id,
+                    'user_id': user_id,
                     'project_id': project
                 })
         return role_assignments
