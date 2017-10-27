@@ -22,6 +22,7 @@ from keystone.assignment.backends import sql
 from keystone import exception
 from keystone.common import driver_hints
 from keystone.common import manager
+from keystone.identity.id_generators import sha256
 
 CONF = keystone.conf.CONF
 LOG = log.getLogger(__name__)
@@ -43,8 +44,7 @@ class Assignment(sql.Assignment):
     def _setup_managers(self):
         self.resource_manager = manager.load_driver(
             'keystone.resource', CONF.resource.driver)
-        self.id_mapping_manager = manager.load_driver(
-            'keystone.identity.id_mapping', CONF.identity_mapping.driver)
+        self.id_mapping_manager = sha256.Generator()
         self.role_manager = manager.load_driver(
             'keystone.role', CONF.role.driver)
 
@@ -71,7 +71,7 @@ class Assignment(sql.Assignment):
         return self.role_manager.list_roles(role_name_filter)[0]['id']
 
     def _get_public_id(self, user_id):
-        return self.id_mapping_manager.get_public_id({
+        return self.id_mapping_manager.generate_public_ID({
             'domain_id': self.domain_id,
             'local_id': user_id,
             'entity_type': 'user'})
