@@ -18,7 +18,8 @@ from oslo_config import cfg
 from oslo_log import log
 
 import keystone.conf
-from keystone.assignment.backends import sql
+from keystone.assignment.backends import sql as assignment_sql
+from keystone.resource.backends import sql as resource_sql
 from keystone import exception
 from keystone.common import driver_hints
 from keystone.common import manager
@@ -38,11 +39,10 @@ json_assignment_opts = [
 CONF.register_opts(json_assignment_opts, 'json_assignment')
 
 
-class Assignment(sql.Assignment):
+class Assignment(assignment_sql.Assignment):
 
     def _setup_managers(self):
-        self.resource_manager = manager.load_driver(
-            'keystone.resource', CONF.resource.driver)
+        self.resource_manager = resource_sql.Resource()
         self.id_mapping_manager = manager.load_driver(
             'keystone.identity.id_mapping', CONF.identity_mapping.driver)
         self.role_manager = manager.load_driver(
