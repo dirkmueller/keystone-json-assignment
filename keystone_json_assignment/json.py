@@ -185,6 +185,22 @@ class Assignment(sql.Assignment):
             # so just return the SQL grants
             return role_assignments
         for user, projects in self.userprojectmap.items():
+            expected_role_assignments = []
+            for project in projects:
+                if project_ids and project not in project_ids:
+                    # We're filtering on projects and this one isn't one of
+                    # them, move on
+                    continue
+                expected_role_assignments.append({
+                    'role_id': self.role_id,
+                    'user_id': user_id,
+                    'project_id': project
+                })
+            # if after fitlering by projects the user has no assignments,
+            # we can skip fetching them from identity backend
+            if not expected_role_assignments:
+                continue
+
             # Make sure we can find the user in LDAP, otherwise we will get a 404
             # when using `openstack role assignment list --names`
             # (see https://bugs.launchpad.net/keystone/+bug/1684820)
@@ -206,16 +222,11 @@ class Assignment(sql.Assignment):
                     # User wasn't found in LDAP
                     LOG.warning("Could not find user: %s" % user)
                     continue
-            for project in projects:
-                if project_ids and project not in project_ids:
-                    # We're filtering on projects and this one isn't one of
-                    # them, move on
-                    continue
-                role_assignments.append({
-                    'role_id': self.role_id,
-                    'user_id': user_id,
-                    'project_id': project
-                })
+            # the user was found -> their user assignments are active
+            # also fixup their id if it changed
+            for role_assignment in expected_role_assignments:
+                role_assignment['user_id'] = user_id
+                role_assignments.append(role_assignment)
         return role_assignments
 
     def add_role_to_user_and_project(self, user_id, tenant_id, role_id):
