@@ -88,25 +88,31 @@ class Assignment(sql.Assignment):
 
         self.userprojectmap = {}
         self.useridmap = {}
+
+        projectnames = set()
+        for projects in userprojectmap.values():
+            for project in projects:
+                projectnames.add(project)
+
         projectidcache = {}
-        for user, project in userprojectmap.items():
+        for projectname in projectnames:
+            try:
+                project = self.resource_manager.get_project_by_name(
+                    projectname, CONF.identity.default_domain_id)
+                projectidcache[projectname] = project['id']
+            except exception.ProjectNotFound as e:
+                LOG.warning("keystone-json-assignment: "
+                            "project-map: cannot lookup %s: %s",
+                            project, e.message)
+
+        for user, projects in userprojectmap.items():
             projectids = {}
             projectid = None
             user_id = self._get_public_id(user)
             if user_id:
                 self.useridmap[user_id] = user
-            for projectname in project:
-                try:
-                    projectid = projectidcache[projectname]
-                except KeyError:
-                    # cache miss - need to fetch from DB
-                    try:
-                        project = self.resource_manager.get_project_by_name(
-                            projectname, CONF.identity.default_domain_id)
-                        projectid = project['id']
-                        projectidcache[projectname] = project['id']
-                    except exception.ProjectNotFound as e:
-                        LOG.warning(e.message)
+            for projectname in projects:
+                projectid = projectidcache.get(projectname)
                 if projectid:
                     projectids[projectid] = 1
             self.userprojectmap[user] = projectids
