@@ -201,8 +201,8 @@ class Assignment(sql.Assignment):
             if not expected_role_assignments:
                 continue
 
-            # Make sure we can find the user in LDAP, otherwise we will get a 404
-            # when using `openstack role assignment list --names`
+            # Make sure we can find the user in LDAP, otherwise we will get a
+            # 404 when using `openstack role assignment list --names`
             # (see https://bugs.launchpad.net/keystone/+bug/1684820)
             try:
                 self.identity_manager.get_user_by_name(user, self.domain_name)
