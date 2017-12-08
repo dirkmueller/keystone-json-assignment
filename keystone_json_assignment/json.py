@@ -218,7 +218,7 @@ class Assignment(sql.Assignment):
                 try:
                     user_id = self.id_mapping_manager.create_id_mapping(entity)
                     self.useridmap[user_id] = user
-                except exceptions.UserNotFound:
+                except exception.UserNotFound:
                     # User wasn't found in LDAP
                     LOG.warning("Could not find user: %s" % user)
                     continue
