@@ -1,1 +1,4 @@
 PyYAML
+oslo.config
+oslo.log
+# theoretically requires keystone but that isn't on pypi
