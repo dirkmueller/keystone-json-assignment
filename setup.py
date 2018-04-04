@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='keystone-json-assignment',
-    version='0.0.1',
+    version='0.0.2',
     description='JSON Backend for the Keystone Assignment Driver',
     url='https://github.com/cmurphy/keystone-json-assignment',
     author='Colleen Murphy',
