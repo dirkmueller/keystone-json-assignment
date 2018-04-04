@@ -4,7 +4,7 @@ setup(
     name='keystone-json-assignment',
     version='0.0.2',
     description='JSON Backend for the Keystone Assignment Driver',
-    url='https://github.com/cmurphy/keystone-json-assignment',
+    url='https://github.com/SUSE-Cloud/keystone-json-assignment',
     author='Colleen Murphy',
     author_email='colleen.murphy@suse.com',
     license='Apache-2.0',
