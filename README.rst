@@ -12,7 +12,7 @@ Installation
 
 ::
 
-    git clone https://github.com/cmurphy/keystone-json-assignment
+    git clone https://github.com/SUSE-Cloud/keystone-json-assignment
     pip install keystone-json-assignment/
 
 Usage
