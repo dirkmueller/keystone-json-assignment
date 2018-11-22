@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='keystone-json-assignment',
-    version='0.0.2',
+    version='0.0.3',
     description='JSON Backend for the Keystone Assignment Driver',
     url='https://github.com/SUSE-Cloud/keystone-json-assignment',
     author='Colleen Murphy',
