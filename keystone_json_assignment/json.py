@@ -179,17 +179,18 @@ class Assignment(assignment_sql.Assignment):
         if user_id:
             # Filtering on user
             if user_id in self.useridmap:
-                projects = self.userprojectmap.get(self.useridmap[user_id])
-                if projects:
-                    for project in projects:
-                        role_assignments.append({
-                            'role_id': self.role_id,
-                            'user_id': user_id,
-                            'project_id': project
-                        })
-            # If user is not in the map then this is probably not an LDAP user
-            # so just return the SQL grants
+                user = self.useridmap[user_id]
+                for project in self.userprojectmap.get(user, []):
+                    # Filter projects that user is not part of
+                    if project_ids and project not in project_ids:
+                        continue
+                    role_assignments.append({
+                        'role_id': self.role_id,
+                        'user_id': user_id,
+                        'project_id': project
+                    })
             return role_assignments
+
         for user, projects in self.userprojectmap.items():
             expected_role_assignments = []
             for project in projects:
